@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -107,12 +107,13 @@ async function main() {
 
   await input({ message: 'Press Enter to continue (Ctrl+C to abort)' });
 
-  run('pnpm', [
-    'version',
-    newVersion,
-    `--tag-version-prefix=${tagPrefix}`,
-    '--message', `chore: release ${tagPrefix}%s`,
-  ], { cwd: extDir });
+  pkg.version = newVersion;
+  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+
+  const commitMsg = `chore: release ${tagName}`;
+  run('git', ['add', pkgPath], { cwd: repoRoot });
+  run('git', ['commit', '-m', commitMsg], { cwd: repoRoot });
+  run('git', ['tag', '-a', tagName, '-m', commitMsg], { cwd: repoRoot });
 
   run('git', ['push'], { cwd: repoRoot });
   run('git', ['push', 'origin', tagName], { cwd: repoRoot });
